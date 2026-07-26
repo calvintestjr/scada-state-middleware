@@ -1,0 +1,41 @@
+# Approved desired state — Site: lab-a (Thread 13 SCADA stack on MS-01)
+# Git is the source of truth. No credentials in this file, ever.
+# Validated by middleware/models.py (SiteBaseline). Unknown keys are rejected.
+
+site: lab-a
+timezone_display: America/New_York
+
+ignition:
+  gateway:
+    # UNVERIFIED: confirm host/port against the running compose stack
+    # before first collector run (CLAUDE.md invariant 5).
+    base_url: "http://ignition:8088"
+    liveness_path: "/StatusPing"
+    expected_state: running
+    poll_interval_s: 10
+    timeout_ms: 3000
+    failure_threshold: 3        # consecutive misses before incident (debounce)
+
+  # Milestone 2 — gated on Thread 13 completion. Present but disabled so the
+  # schema is exercised now and the drills light up later with a one-line flip.
+  opc_connections:
+    lab_opc:
+      enabled: false
+      expected_status: connected
+  database_connections:
+    SCADA:
+      enabled: false
+      expected_status: connected
+      host: mysql
+      port: 3306
+  tag_quality:
+    enabled: false
+    max_bad_quality_pct: 5.0
+
+time_sync:
+  ntp_server: "pool.ntp.org"
+  max_offset_ms: 250            # policy threshold → warning
+  critical_offset_ms: 2000      # → operational_degradation
+  poll_interval_s: 60
+  timeout_ms: 3000
+  failure_threshold: 3

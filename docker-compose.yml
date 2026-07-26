@@ -1,0 +1,60 @@
+# Observer stack — separate compose project from the SCADA stack (ADR-001 d3).
+# Join the observed stack via the external network `scada_observe`:
+#   docker network create scada_observe        (once, on MS-01)
+# and attach the Ignition service in the SCADA compose file to it.
+
+services:
+  mw-postgres:
+    image: postgres:16
+    container_name: mw-postgres
+    environment:
+      POSTGRES_USER: ${MW_DB_USER:?set in .env}
+      POSTGRES_PASSWORD: ${MW_DB_PASSWORD:?set in .env}
+      POSTGRES_DB: ${MW_DB_NAME:?set in .env}
+      TZ: America/New_York
+      PGTZ: UTC
+    volumes:
+      - mw_pgdata:/var/lib/postgresql/data
+      - ./middleware/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MW_DB_USER:?} -d ${MW_DB_NAME:?}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [mw_internal]
+
+  mw-collector:
+    build: .
+    container_name: mw-collector
+    command: python -m middleware.collector.runner
+    environment: &mw_env
+      MW_DB_HOST: mw-postgres
+      MW_DB_USER: ${MW_DB_USER:?}
+      MW_DB_PASSWORD: ${MW_DB_PASSWORD:?}
+      MW_DB_NAME: ${MW_DB_NAME:?}
+      MW_BASELINE: desired-state/sites/lab-a.yaml
+      TZ: America/New_York
+    depends_on:
+      mw-postgres: { condition: service_healthy }
+    networks: [mw_internal, scada_observe]
+    restart: unless-stopped
+
+  mw-api:
+    build: .
+    container_name: mw-api
+    command: uvicorn middleware.api.main:app --host 0.0.0.0 --port 8090
+    environment: *mw_env
+    ports:
+      - "8090:8090"
+    depends_on:
+      mw-postgres: { condition: service_healthy }
+    networks: [mw_internal]
+    restart: unless-stopped
+
+volumes:
+  mw_pgdata:
+
+networks:
+  mw_internal:
+  scada_observe:
+    external: true

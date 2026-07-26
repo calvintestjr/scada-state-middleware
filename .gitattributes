@@ -1,0 +1,11 @@
+﻿# Repo normalizes to LF. These files are built into Linux containers;
+# CRLF breaks shell scripts and confuses container tooling.
+* text=auto eol=lf
+
+# Windows-native helpers, if added later, stay CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.zip binary
