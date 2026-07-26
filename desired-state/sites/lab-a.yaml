@@ -7,9 +7,9 @@ timezone_display: America/New_York
 
 ignition:
   gateway:
-    # UNVERIFIED: confirm host/port against the running compose stack
-    # before first collector run (CLAUDE.md invariant 5).
-    base_url: "http://ignition:8088"
+    # VERIFIED 2026-07-26 against caltest-ignition (Ignition 8.1.44):
+    # GET /StatusPing returns {"state":"RUNNING"}; name resolves on scada_observe.
+    base_url: "http://caltest-ignition:8088"
     liveness_path: "/StatusPing"
     expected_state: running
     poll_interval_s: 10
